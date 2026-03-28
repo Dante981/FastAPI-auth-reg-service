@@ -1,0 +1,35 @@
+services:
+  # =========================================
+  # PostgreSQL (база данных)
+  # =========================================
+  postgres:
+    # Легкий alpine образ
+    image: postgres:16-alpine
+    container_name: AhRgS_postgres
+
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    # Проброс порта на хост
+    ports:
+      - "5432:5432"
+
+    # Том для БД 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    # Healthcheck: проверяет готовность БД
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s   # Каждые 10 сек
+      timeout: 5s     # Таймаут 5 сек
+      retries: 5      # 5 попыток
+
+    # Авторестарт при сбоях
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
