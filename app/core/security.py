@@ -17,7 +17,7 @@ from app.database import get_db
 
 from app.models.users import User
 from app.models.RefreshSession import RefreshSession
-
+from app.schemas.user import UserRead
 
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -43,7 +43,7 @@ def create_access_token(data: dict, jti: str, expires_delta: timedelta | None = 
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> UserReadAndRole:
+async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> UserRead:
     exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED, 
         detail="Could not validate credentials", 
