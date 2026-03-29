@@ -78,9 +78,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     stmt = (
-        select(User, RefreshSession)
+        select(User)
         .options(selectinload(User.role))
-        .join(RefreshSession, RefreshSession.user_id == User.id)
         .where(
             User.id == user_id,
             User.is_active.is_(True),

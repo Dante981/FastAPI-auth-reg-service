@@ -11,7 +11,7 @@ async def create_session(user_id: int, db: AsyncSession, expires_delta: timedelt
     from app.core.security import create_jti
     jti = create_jti()
     expires_at = datetime.now(timezone.utc) + (
-        expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta or timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
     )
 
     session = RefreshSession(

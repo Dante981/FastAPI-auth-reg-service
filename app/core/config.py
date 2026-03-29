@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     ALGORITHM: str                          # Алгоритм подписи JWT
     
     ACCESS_TOKEN_EXPIRE_MINUTES: int        # Время жизни access токена в минутах
+    REFRESH_TOKEN_EXPIRE_MINUTES: int       # Время жизни refresh токена в минутах
     
     class Config:
         env_file = ".env"
