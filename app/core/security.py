@@ -15,9 +15,12 @@ from passlib.context import CryptContext
 from app.core.config import settings
 from app.database import get_db
 
+from app.schemas.auth import Token
 from app.models.users import User
-from app.models.RefreshSession import RefreshSession
+from app.models.refresh_sessions import RefreshSession
 from app.schemas.user import UserRead
+
+from app.crud.session import create_session
 
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -42,13 +45,11 @@ def create_access_token(data: dict, jti: str, expires_delta: timedelta | None = 
         "jti": jti})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> UserRead:
+def  jwt_decode(token: str) -> dict:
     exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED, 
         detail="Could not validate credentials", 
         headers={"WWW-Authenticate": "Bearer"})
-
     try:
         payload = jwt.decode(
             token,
@@ -65,6 +66,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         jti = str(jti)
     except (JWTError, ValueError):
         raise exception
+    return {"user_id":user_id,"jti":jti}
+
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> UserRead:
+
+    payload = jwt_decode(token=token)
+    user_id = int(payload.get("user_id"))
+    jti = str(payload.get("jti"))
+
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     stmt = (
         select(User, RefreshSession)
@@ -73,19 +84,52 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         .where(
             User.id == user_id,
             User.is_active.is_(True),
-            RefreshSession.jti == jti,
-            RefreshSession.revoked.is_(False),
-            RefreshSession.expires_at > now,
         )
     )
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
     if user is None:
-        raise exception
+        raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, 
+        detail="Could not validate credentials", 
+        headers={"WWW-Authenticate": "Bearer"})
 
     return user
 
+async def refresh_token(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> Token:
+    payload = jwt_decode(token=token)
+    user_id = int(payload.get("user_id"))
+    jti = str(payload.get("jti"))
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    stmt = select(RefreshSession).where(
+        RefreshSession.jti == jti,
+        RefreshSession.user_id == user_id,
+        RefreshSession.revoked.is_(False),
+        RefreshSession.expires_at > now,
+    )
+
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if session is None:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    session.revoked = True
+    await db.commit()
+
+    new_session = await create_session(user_id=user_id, db=db)
+    new_access_token = create_access_token(
+        data={"sub": str(user_id)},
+        jti=new_session.jti,
+    )
+    return Token(access_token=new_access_token, token_type="bearer")
+
+async def get_session_by_jti(db: AsyncSession, jti: str) -> RefreshSession | None:
+    stmt = select(RefreshSession).where(RefreshSession.jti == jti)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
 
 def require_role(*allowed_roles: str):
     def dependency(user: User = Depends(get_current_user)):

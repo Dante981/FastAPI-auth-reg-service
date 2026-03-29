@@ -1,4 +1,4 @@
-## Структура
+Структура
 project/
 ├─ app/
 │  ├─ main.py
@@ -31,7 +31,7 @@ project/
 └─ README.md
 
 
-## Эндпоинты
+Эндпоинты
 Публичные авторизация auth:
     POST /auth/register — регистрация пользователя.
     POST /auth/login — вход по email и паролю, выдача access token.
@@ -61,7 +61,7 @@ project/
 
 
 
-## Тестовые пользователи##
+Тестовые пользователи##
 test1@test.ru:1234567890:admin
 test2@test.ru:1234567890:moderator
 test3@test.ru:1234567890:user

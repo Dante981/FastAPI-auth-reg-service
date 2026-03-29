@@ -5,7 +5,7 @@ from app.schemas.user import UserRead
 from app.schemas.auth import Token, UserCreate, UserLogin
 from app.database import get_db
 from app.crud.auth import user_register, user_login
-from app.core.security import get_current_user
+from app.core.security import get_current_user, refresh_token
 
 # Создаём маршрутизатор для авторизации
 router = APIRouter(
@@ -23,6 +23,11 @@ async def register_user(create_user: UserCreate, db: AsyncSession = Depends(get_
 @router.post("/login", response_model=Token)
 async def login_user(form_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Token:
     return await user_login(form_data=form_data, db=db)
+
+#Эднпоинт обновления токена
+@router.post("/refresh", response_model=Token)
+async def refresh_token(new_token: Token = Depends(refresh_token)) -> Token:
+    return new_token
 
 #Эднпоинт выхода
 @router.post("/logout", status_code=204)
