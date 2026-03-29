@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, EmailStr
+from app.schemas.roles import RoleReadPublic
 
 class UserUpdate(BaseModel):
     """
@@ -23,6 +24,14 @@ class UserRead(BaseModel):
     email: EmailStr = Field(..., max_length=50, description="Email")
     is_active: bool = Field(default=True, description="Активность пользователя")
 
+    role: RoleReadPublic  = Field(..., description="Роль")
+
     model_config = {
         "from_attributes": True  # Включает поддержку ORM‑моделей
+        
     }
+
+
+
+
+

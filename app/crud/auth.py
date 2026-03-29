@@ -4,6 +4,7 @@ from typing import Annotated
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm 
@@ -11,7 +12,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.config import settings
 from app.core.security import hash_password, verify_password, create_access_token
-from app.models.user import User
+from app.models.users import User
 from app.schemas.auth import UserCreate, Token, UserLogin
 from app.schemas.user import UserRead
 from app.crud.session import create_session
@@ -46,12 +47,23 @@ async def user_register(user_create: UserCreate, db: AsyncSession) -> UserRead:
     await db.commit()
     await db.refresh(user)
 
+
+    stmt = (
+    select(User)
+    .options(selectinload(User.role))
+    .where(User.id == user.id)
+)
+    result = await db.execute(stmt)
+    user = result.scalar_one()
+
     return UserRead.model_validate(user)
 
 
 
 async def user_login(form_data: UserLogin, db: AsyncSession) -> Token:
-    stmt = select(User).where(User.email == form_data.email)
+    stmt = select(User).where(
+        User.email == form_data.email,
+        User.is_active.is_(True))
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 

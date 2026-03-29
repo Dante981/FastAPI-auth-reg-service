@@ -1,4 +1,4 @@
-**Структура**
+## Структура
 project/
 ├─ app/
 │  ├─ main.py
@@ -31,7 +31,7 @@ project/
 └─ README.md
 
 
-**Эндпоинты**
+## Эндпоинты
 Публичные авторизация auth:
     POST /auth/register — регистрация пользователя.
     POST /auth/login — вход по email и паролю, выдача access token.
@@ -43,10 +43,6 @@ project/
     DELETE /users/me — мягко удалить свой аккаунт, установить is_active = false и разлогинить пользователя.
 
 Админские права:
-    GET /permissions — список всех правил доступа.
-    POST /permissions — создать правило.
-    PATCH /permissions/{id} — изменить правило.
-    DELETE /permissions/{id} — удалить правило.
     GET /roles — список ролей.
     POST /roles — создать роль.
     PATCH /roles/{id} — изменить роль.
@@ -65,7 +61,7 @@ project/
 
 
 
-**Тестовые пользователи**
+## Тестовые пользователи##
 test1@test.ru:1234567890:admin
 test2@test.ru:1234567890:moderator
 test3@test.ru:1234567890:user

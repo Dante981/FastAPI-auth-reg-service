@@ -6,15 +6,17 @@ from fastapi.security import OAuth2PasswordBearer
 from uuid import uuid4
 from jose import jwt, JWTError
 
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from passlib.context import CryptContext
 
 from app.core.config import settings
 from app.database import get_db
 
-from app.models.user import User
+from app.models.users import User
+from app.models.RefreshSession import RefreshSession
 
 
 
@@ -41,7 +43,7 @@ def create_access_token(data: dict, jti: str, expires_delta: timedelta | None = 
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> User:
+async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> UserReadAndRole:
     exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED, 
         detail="Could not validate credentials", 
@@ -55,14 +57,27 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         )
         
         user_id = payload.get("sub")
+        jti = payload.get('jti')
         
-        if user_id is None:
+        if user_id is None or jti is None:
             raise exception
         user_id = int(user_id)
+        jti = str(jti)
     except (JWTError, ValueError):
         raise exception
-
-    stmt = select(User).where(User.id == user_id)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    stmt = (
+        select(User, RefreshSession)
+        .options(selectinload(User.role))
+        .join(RefreshSession, RefreshSession.user_id == User.id)
+        .where(
+            User.id == user_id,
+            User.is_active.is_(True),
+            RefreshSession.jti == jti,
+            RefreshSession.revoked.is_(False),
+            RefreshSession.expires_at > now,
+        )
+    )
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
@@ -70,3 +85,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         raise exception
 
     return user
+
+
+def require_role(*allowed_roles: str):
+    def dependency(user: User = Depends(get_current_user)):
+        if user.role.code not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Operation not permitted")
+        return user
+    return dependency

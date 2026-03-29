@@ -17,7 +17,7 @@ last_login_at  - дата последнего захода [DateTime, def=None,
 
 from datetime import datetime
 
-from sqlalchemy import String, Integer, DateTime, func
+from sqlalchemy import String, Integer, DateTime, func, ForeignKey, Boolean
 from sqlalchemy.orm  import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -35,6 +35,15 @@ class User(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default='true', nullable=False)
+
+
+    role_id: Mapped[int] = mapped_column(Integer, ForeignKey("roles.id"),  default=2, unique=False, nullable=False)
+
+    role: Mapped["Role"] = relationship(
+        "Role",
+        back_populates="users"
+    )
 
     sessions: Mapped[list["RefreshSession"]] = relationship(
         "RefreshSession",

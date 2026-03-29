@@ -2,7 +2,7 @@ from sqlalchemy import select, or_
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.user import UserUpdate, UserRead
-from app.models.user import User
+from app.models.users import User
 
 
 async def update_user_profile(new_data: UserUpdate, current_user: User, db: AsyncSession) -> UserRead:
