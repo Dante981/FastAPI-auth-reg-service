@@ -21,7 +21,7 @@ from app.crud.session import create_session
 
 
 
-async def user_register(user_create: UserCreate, db: AsyncSession) -> UserRead:
+async def user_register(user_create: UserCreate, db: AsyncSession) -> User:
     if user_create.password != user_create.password_confirm:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Пароли не совпадают")
     stmt = select(User).where(
@@ -56,7 +56,7 @@ async def user_register(user_create: UserCreate, db: AsyncSession) -> UserRead:
     result = await db.execute(stmt)
     user = result.scalar_one()
 
-    return UserRead.model_validate(user)
+    return user
 
 
 

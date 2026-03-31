@@ -19,3 +19,11 @@ class Role(Base):
         "User",
         back_populates="role"
     )
+
+    permissions = relationship(
+        "Permission",
+        secondary="role_permissions",
+        back_populates="roles",
+    )
+
+

@@ -21,6 +21,7 @@ from app.models.refresh_sessions import RefreshSession
 from app.schemas.user import UserRead
 
 from app.crud.session import create_session
+from app.crud.permissions import get_user_permissions
 
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -45,36 +46,41 @@ def create_access_token(data: dict, jti: str, expires_delta: timedelta | None = 
         "jti": jti})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-def  jwt_decode(token: str) -> dict:
-    exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, 
-        detail="Could not validate credentials", 
-        headers={"WWW-Authenticate": "Bearer"})
+def jwt_decode(token: str) -> dict:
+    invalid_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
     try:
         payload = jwt.decode(
             token,
             settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            algorithms=[settings.ALGORITHM],
         )
-        
+
         user_id = payload.get("sub")
-        jti = payload.get('jti')
-        
+        jti = payload.get("jti")
+
         if user_id is None or jti is None:
-            raise exception
-        user_id = int(user_id)
-        jti = str(jti)
-    except (JWTError, ValueError):
-        raise exception
-    return {"user_id":user_id,"jti":jti}
+            raise invalid_exception
+
+        return {
+            "user_id": int(user_id),
+            "jti": str(jti),
+        }
+
+    except (JWTError, ValueError, TypeError):
+        raise invalid_exception
 
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> UserRead:
+async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> User:
 
     payload = jwt_decode(token=token)
-    user_id = int(payload.get("user_id"))
-    jti = str(payload.get("jti"))
+    user_id = payload.get("user_id")
+    jti = payload.get("jti")
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     stmt = (
@@ -100,6 +106,9 @@ async def refresh_token(token: str = Depends(oauth2_scheme), db: AsyncSession = 
     payload = jwt_decode(token=token)
     user_id = int(payload.get("user_id"))
     jti = str(payload.get("jti"))
+
+
+
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     stmt = select(RefreshSession).where(
@@ -130,9 +139,11 @@ async def get_session_by_jti(db: AsyncSession, jti: str) -> RefreshSession | Non
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
-def require_role(*allowed_roles: str):
-    def dependency(user: User = Depends(get_current_user)):
-        if user.role.code not in allowed_roles:
-            raise HTTPException(status_code=403, detail="Operation not permitted")
-        return user
-    return dependency
+
+def require_permission(permission: str):
+    async def checker(current_user = Depends(get_current_user), db = Depends(get_db)):
+        permissions = await get_user_permissions(current_user.id, db)
+        if permission not in permissions:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return current_user
+    return checker

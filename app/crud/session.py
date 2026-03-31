@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -25,4 +25,16 @@ async def create_session(user_id: int, db: AsyncSession, expires_delta: timedelt
     await db.commit()
     await db.refresh(session)
     return session
+
+
+async def revoke_all_user_sessions(user_id: int, db: AsyncSession) -> None:
+    stmt = (
+        update(RefreshSession)
+        .where(
+            RefreshSession.user_id == user_id,
+            RefreshSession.revoked.is_(False))
+        .values(revoked=True)
+            )
+    await db.execute(stmt)
+    await db.commit()
 

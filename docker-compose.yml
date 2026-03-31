@@ -31,5 +31,50 @@ services:
     # Авторестарт при сбоях
     restart: unless-stopped
 
+  # =========================================
+  # PostgreSQL (тестовая база данных)
+  # =========================================
+  postgres_test:
+    image: postgres:16-alpine
+    container_name: auth_postgres_test
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_TEST}
+      POSTGRES_USER: ${POSTGRES_USER_TEST}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_TEST}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER_TEST} -d ${POSTGRES_DB_TEST}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+    
+  # =========================================
+  # Сервис API
+  # =========================================
+  api:
+    build: .
+    container_name: auth_api
+
+    environment:
+      DATABASE_URL_ASYNC: ${DATABASE_URL_ASYNC}
+      DATABASE_URL_ASYNC_TEST: ${DATABASE_URL_ASYNC_TEST}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres_test:
+        condition: service_healthy
+    
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  postgres_test_data:

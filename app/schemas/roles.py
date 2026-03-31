@@ -1,29 +1,32 @@
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict
+from app.schemas.permissions import PermissionRead
 
 
 class RoleBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     name: str = Field(..., min_length=2, max_length=20, description="Имя")
+    code: str = Field(..., min_length=2, max_length=50, description="Код роли")
+
 
 class RoleCreate(RoleBase):
-    """
-    Модель для создания роли
-    Используется в POST эндпоинтах
-    """
-    pass
+    permission_codes: list[str] = Field(default_factory=list, description="Список кодов разрешений")
+
+
+class RoleSet(BaseModel):
+    code: str = Field(..., min_length=2, max_length=50, description="Код роли")
+
+class RoleUpdate(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    name: str | None = Field(default=None, min_length=2, max_length=20)
+    permission_codes: list[str] | None = None
+
 
 class RoleReadPublic(RoleBase):
-    """
-    Модель для чтения роли
-    Используется в публичных GET эндпоинтах
-    """
-    code: str = Field(..., description="Код роли")
+    pass
 
-class RoleRead(RoleReadPublic):
-    """
-    Модель для чтения роли
-    Используется в GET эндпоинтах
-    """
+
+class RoleRead(RoleBase):
     id: int = Field(..., gt=0, description="ID роли")
-
-
+    permissions: list[PermissionRead] = Field(default_factory=list)

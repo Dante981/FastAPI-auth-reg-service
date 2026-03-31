@@ -6,12 +6,18 @@ from sqlalchemy import create_engine, pool
 
 from app.models import Base
 
+import os
 
+def get_url():
+    env = settings.ALEMBIC_ENV
+    if env == "test":
+        return settings.DATABASE_URL_SYNC_TEST
+    return settings.DATABASE_URL_SYNC
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-database_url = settings.DATABASE_URL_SYNC
+database_url = get_url()
 
 config.set_main_option("sqlalchemy.url", database_url)
 # Interpret the config file for Python logging.

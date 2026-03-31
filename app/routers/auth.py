@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordRequestForm
+
 from app.schemas.user import UserRead
 from app.schemas.auth import Token, UserCreate, UserLogin
+from app.models.users import User
 from app.database import get_db
 from app.crud.auth import user_register, user_login
 from app.core.security import get_current_user, refresh_token
-
+from app.crud.session import revoke_all_user_sessions
 # Создаём маршрутизатор для авторизации
 router = APIRouter(
     prefix="/auth",
@@ -14,23 +16,23 @@ router = APIRouter(
 )
 
 
-#Эднпоинт регистрации
+#Эндпоинт регистрации
 @router.post('/register', response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register_user(create_user: UserCreate, db: AsyncSession = Depends(get_db)) -> UserRead:
     return await user_register(user_create=create_user, db=db)
 
-#Эднпоинт входа
+#Эндпоинт входа
 @router.post("/login", response_model=Token)
 async def login_user(form_data: UserLogin, db: AsyncSession = Depends(get_db)) -> Token:
     return await user_login(form_data=form_data, db=db)
 
-#Эднпоинт обновления токена
+#Эндпоинт обновления токена
 @router.post("/refresh", response_model=Token)
 async def refresh_token(new_token: Token = Depends(refresh_token)) -> Token:
     return new_token
 
-#Эднпоинт выхода
+#Эндпоинт выхода
 @router.post("/logout", status_code=204)
 async def logout_user(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> None:
-    pass
+    await revoke_all_user_sessions(user_id=current_user.id, db=db)
 

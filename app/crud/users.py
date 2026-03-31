@@ -1,4 +1,4 @@
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, update
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.user import UserUpdate, UserRead
@@ -7,12 +7,16 @@ from app.models.users import User
 
 async def update_user_profile(new_data: UserUpdate, current_user: User, db: AsyncSession) -> UserRead:
     data = new_data.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Empty body")
+
 
     conditions = []
     if "login" in data:
         conditions.append(User.login == data["login"])
     if "email" in data:
         conditions.append(User.email == data["email"])
+
 
     if conditions:
         stmt = select(User).where(or_(*conditions), User.id != current_user.id)
@@ -32,3 +36,20 @@ async def update_user_profile(new_data: UserUpdate, current_user: User, db: Asyn
     await db.commit()
     await db.refresh(current_user)
     return current_user
+
+
+
+async def soft_removal_user(user_id: int, db: AsyncSession)-> None:
+    stmt = (
+        update(User)
+        .where(User.id == user_id)
+        .values(is_active = False))
+
+    result = await db.execute(stmt)
+    await db.commit()
+
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
