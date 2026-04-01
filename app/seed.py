@@ -95,32 +95,6 @@ async def seed_permissions(session: AsyncSession) -> None:
 
     await session.commit()
 
-async def seed_permissions(session: AsyncSession) -> None:
-    permissions = [
-        {"code": "users:view", "name": "View users"},
-        {"code": "users:update", "name": "Update users"},
-        {"code": "users:delete", "name": "Delete users"},
-        {"code": "users:assign_role", "name": "Assign role to user"},
-        {"code": "users:remove_role", "name": "Remove role from user"},
-        {"code": "roles:view", "name": "View roles"},
-        {"code": "roles:create", "name": "Create roles"},
-        {"code": "roles:update", "name": "Update roles"},
-        {"code": "roles:delete", "name": "Delete roles"},
-        {"code": "sessions:view", "name": "View sessions"},
-        {"code": "sessions:revoke", "name": "Revoke session"},
-        {"code": "sessions:revoke_all", "name": "Revoke all sessions"},
-    ]
-
-    for perm_data in permissions:
-        result = await session.execute(
-            select(Permission).where(Permission.code == perm_data["code"])
-        )
-        perm = result.scalar_one_or_none()
-        if perm is None:
-            session.add(Permission(**perm_data))
-
-    await session.commit()
-
 
 async def seed_roles(session: AsyncSession) -> None:
     roles_data = [
