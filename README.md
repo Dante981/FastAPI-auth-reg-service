@@ -233,16 +233,16 @@ pip install -r requirements.txt
 # База данных
 DATABASE_URL_ASYNC=postgresql+asyncpg://postgres:postgres@localhost:5432/app_db
 DEBUG=True
-POSTGRES_DB=AhRgS
+POSTGRES_DB=app_db
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=vl7yDzjO2
+POSTGRES_PASSWORD=pass
 
 
 # тестова База данных
 DATABASE_URL_ASYNC_TEST=postgresql+asyncpg://postgres:postgres@localhost:5432/app_db_test
-POSTGRES_DB_TEST=AhRgS_test
+POSTGRES_DB_TEST=app_db_test
 POSTGRES_USER_TEST=postgres
-POSTGRES_PASSWORD_TEST=vl7yDzjO2
+POSTGRES_PASSWORD_TEST=pass
 
 # Sync для Alembic миграций
 DATABASE_URL_SYNC=postgresql+psycopg://postgres:postgres@localhost:5432/app_db
